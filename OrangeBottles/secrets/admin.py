@@ -3,7 +3,6 @@ from django.contrib import admin
 
 admin.site.register(Person)
 admin.site.register(Term)
-#admin.site.register(Blackmail)
 
 class TermInline(admin.StackedInline):
     model = Term
@@ -13,7 +12,6 @@ class BlackmailAdmin(admin.ModelAdmin):
     fieldsets = [
         ('Related People',          {'fields': ['target','owner']}),
         ('Evidence',                {'fields': ['picture']}),
-        (None,                      {'fields': ['demands']}),
         ('date time info',          {'fields': ['deadline', 'timecreated']}),
     ]
     inlines = [TermInline]
