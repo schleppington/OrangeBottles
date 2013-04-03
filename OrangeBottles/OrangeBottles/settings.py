@@ -127,6 +127,20 @@ INSTALLED_APPS = (
     # 'django.contrib.admindocs',
 )
 
+
+#Email Settings
+EMAIL_USE_TLS = True
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'cs473orangebottles@gmail.com'
+EMAIL_HOST_PASSWORD = '0rangeb0ttles'
+EMAIL_PORT = 587
+
+#to send email:
+#   from django.core.mail import EmailMessage
+#   email = EmailMessage('subject', 'body', to=['toAddress@asdf.com'])
+#   email.send()
+
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error when DEBUG=False.
