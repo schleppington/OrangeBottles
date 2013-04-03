@@ -3,6 +3,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.core.urlresolvers import reverse
 from django.template import RequestContext
 from django.core.context_processors import csrf
+from django.core.mail import EmailMessage
 from secrets.models import Person, Blackmail
 import datetime
 import secretsforms
@@ -26,7 +27,7 @@ def index(request):
     output = ""
     #gets the current user thats logged in (if user is logged in)
     if isLoggedIn(request):
-        output += "Current User: " + str(request.session.get('useremail')) + "</br></br>"
+        output += "Current User: " + str(request.session.get('useremail','')) + "</br></br>"
     #display bm objects in displaylist
     output += "all items: </br>"
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in bm_list])
@@ -34,15 +35,36 @@ def index(request):
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in display_list])
     output += '</br></br>dont display list</br>'
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in dont_display])
-    output += '</br></br>next object to be revealed</br>'
-    output += str(dont_display[0]) + " : " + str(dont_display[0].deadline)
-
+    
+    outputDict = {}
+    
+    if dont_display.count > 0:
+        output += '</br></br>next object to be revealed</br>'
+        output += str(dont_display[0]) + " : " + str(dont_display[0].deadline)
+        nextbm = dont_display[0]
+        timetoreveal = nextbm.deadline.replace(tzinfo=None) - now
+        output += "</br>in: " + str(timetoreveal)
+        days = timetoreveal.days
+        secs = timetoreveal.seconds
+        hours = int((secs / (3600)))
+        secs = secs - (hours * 3600)
+        mins = int(secs / 60)
+        secs = secs - mins * 60
+        
+        #used for countdown in template
+        outputDict['countdown_days'] = days
+        outputDict['countdown_hours'] = hours
+        outputDict['countdown_mins'] = mins
+        outputDict['countdown_secs'] = secs
+        output += "</br>" + str(days) + " : " + str(hours) + " : " + str(mins) + " : " + str(seconds)
+            
+    outputDict['display_list'] = display_list
     return HttpResponse(output)
     
-def details(request):
+def details(request, bm_id):
     return HttpResponse("details page")
     
-def edit(request):
+def edit(request, bm_id):
     return HttpResponse("editing page")
     
 def create(request):
@@ -58,8 +80,7 @@ def signin(request):
             pw = form.cleaned_data['Password']
             if checkCreds(request, user, pw):
                 #allow user to continue
-                return HttpResponse("access granted")
-                #return redirect('/secrets/')
+                return redirect('/secrets/')
             else:
                 #invlaid login credentials
                 c = {}
@@ -186,6 +207,9 @@ def createUserAccount(request, username, useremail, pw1, pw2):
     p.salt = pwsalt
     p.save()
     
+    #send email to the new user
+    #sendUserCreatedEmail(useremail)
+    
     #set session variables
     request.session['loggedin'] = True
     request.session['useremail'] = useremail
@@ -193,10 +217,11 @@ def createUserAccount(request, username, useremail, pw1, pw2):
         
         
         
+def sendUserCreatedEmail(useremail):
+    body = '''
+Congradulations on joining OrangeBottles, The #1 new blackmailing website!
+We look forward to seeing what others have in store for them...
+    '''
+    email = EmailMessage('Welcome to OrangeBottles', 'body', to=[useremail])
+    email.send()
         
-        
-        
-        
-        
-        
-    
