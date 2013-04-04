@@ -56,7 +56,7 @@ def index(request):
         outputDict['countdown_hours'] = hours
         outputDict['countdown_mins'] = mins
         outputDict['countdown_secs'] = secs
-        output += "</br>" + str(days) + " : " + str(hours) + " : " + str(mins) + " : " + str(seconds)
+        output += "</br>" + str(days) + " : " + str(hours) + " : " + str(mins) + " : " + str(secs)
             
     outputDict['display_list'] = display_list
     return HttpResponse(output)
