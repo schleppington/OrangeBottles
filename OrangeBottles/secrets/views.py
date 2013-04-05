@@ -62,12 +62,36 @@ def index(request):
     return HttpResponse(output)
     
 def details(request, bm_id):
+    #no post method, everything happens in the response. This will probably just be a templating thing?
     return HttpResponse("details page")
     
 def edit(request, bm_id):
+    if request.method == 'POST':
+        #must create edit form
+        if form.is_valid():
+            print "edit blackmail"
     return HttpResponse("editing page")
     
 def create(request):
+    if request.method == 'POST':
+        form = secretsforms.createBlackmailForm(request.POST)
+        if form.is_valid():
+            #must get target and owner before calling createBlackmail. Not sure how the form is hanlding it...
+            createBlackmail(request, target, owner, form.cleaned_data['picture'], form.cleaned_data['deadline'], form.cleaned_data['demands'])
+            #if the blackmail was created, should redirect to details page with blackmail
+        else:
+            c = {}
+            c.update(csrf(request))
+            c['formhaserrors'] = True
+            c['form'] = form
+            return render_to_response('secrets/create.html', c) #create.html needs to be created
+    else:
+        form = secretsforms.createBlackmailForm()
+        c = {}
+        c.update(csrf(request))
+        c['form'] = form
+        return render_to_response('secrets/create.html', c)
+
     return HttpResponse("create bm page")
     
 def signin(request):
@@ -128,6 +152,7 @@ def signup(request):
             c = {}
             c.update(csrf(request))
             c['form'] = form
+            return render_to_response('secrets/createPersonForm.html', c)  
     else:
         form = secretsforms.createUserForm()
         c = {}
@@ -224,4 +249,19 @@ We look forward to seeing what others have in store for them...
     '''
     email = EmailMessage('Welcome to OrangeBottles', 'body', to=[useremail])
     email.send()
-        
+
+def createBlackmail(request, target, owner, picture, deadline, demands):
+    b = Blackmail()
+    b.target = target
+    b.owner = owner
+    b.picture = picture
+    b.deadline = deadline
+    b.timecreated = str(datetime.datetime.now())
+    b.demandsmet = False
+    
+    t = Term()
+    t.blackmail = b
+    t.demand = demands
+
+    b.save()
+    t.save()
