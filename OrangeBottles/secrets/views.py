@@ -62,7 +62,8 @@ def index(request):
     return HttpResponse(output)
     
 def details(request, bm_id):
-    #no post method, everything happens in the response. This will probably just be a templating thing?
+    #no post method, everything happens in the response.
+    #This will probably just be a templating thing?
     return HttpResponse("details page")
     
 def edit(request, bm_id):
@@ -76,15 +77,42 @@ def create(request):
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST)
         if form.is_valid():
-            #must get target and owner before calling createBlackmail. Not sure how the form is hanlding it...
-            createBlackmail(request, target, owner, form.cleaned_data['picture'], form.cleaned_data['deadline'], form.cleaned_data['demands'])
-            #if the blackmail was created, should redirect to details page with blackmail
+            #If the user is not logged in, need to have them do so.
+            if not isLoggedIn(request):
+                #CHECK: Should this be a return statement instead?
+                redirect('/secrets/signin/')
+
+            #must get target and owner before calling createBlackmail. 
+                #Owner should be known if the user creating the blackmail is
+                #logged in. If the user is not logged in, they would have been
+                #redirected to the signin page.
+
+                #CHECK: Should the target info be a valid user or just an
+                #email?
+            createBlackmail(request, target, owner, 
+                            form.cleaned_data['picture'],
+                            form.cleaned_data['deadline'],
+                            form.cleaned_data['demands'])
+            #if the blackmail was created, should redirect to details page with
+            #blackmail
+                # TODO ^ : Search database for bm_id; if found, redirect
+                    #CHECK: Can an owner have multiple ACTIVE blackmails out on
+                    #the same target?
+                    # If so,
+                        #need to create a method to get the ID of the currently
+                        #selected record. (In this case, the current record would
+                        #be the newly created record; perhaps the createBlackmail
+                        #function should return the new record's ID).
+                    # If not,
+                        #need to make sure the user knows they are already
+                        #blackmailing that target. Redirect to Edit page?
+            return redirect('/secrets/create.html/(?P<bm_id>\d+)/')
         else:
             c = {}
             c.update(csrf(request))
             c['formhaserrors'] = True
             c['form'] = form
-            return render_to_response('secrets/create.html', c) #create.html needs to be created
+            return render_to_response('secrets/create.html', c)
     else:
         form = secretsforms.createBlackmailForm()
         c = {}
