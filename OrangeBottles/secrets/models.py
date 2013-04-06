@@ -1,4 +1,3 @@
-
 from django.db import models
 
 class Person(models.Model):
@@ -26,7 +25,12 @@ class Term(models.Model):
     demand = models.CharField(max_length=400)
     def __unicode__(self):
         return self.demand
-        
-        
 
 
+class BlackmailFields(models.Model):
+    target = models.EmailField(max_length=50, unique=True)
+    picture = models.ImageField(upload_to="images/")
+    deadline = models.DateTimeField()
+    demands = models.CharField(max_length=400)
+    def __unicode__(self):
+        return "Target: " + str(self.target) + " - owner: " + str(self.owner)
