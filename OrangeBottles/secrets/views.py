@@ -61,11 +61,13 @@ def index(request):
     outputDict['display_list'] = display_list
     return HttpResponse(output)
     
+
 def details(request, bm_id):
     #no post method, everything happens in the response.
     #This will probably just be a templating thing?
     return HttpResponse("details page")
     
+
 def edit(request, bm_id):
     if request.method == 'POST':
         #must create edit form
@@ -73,6 +75,7 @@ def edit(request, bm_id):
             print "edit blackmail"
     return HttpResponse("editing page")
     
+
 def create(request):
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST)
@@ -81,32 +84,30 @@ def create(request):
             if not isLoggedIn(request):
                 #CHECK: Should this be a return statement instead?
                 redirect('/secrets/signin/')
+            
+            tEMail = form.cleaned_data['target']
+            #must get target and owner ID's before calling createBlackmail.
+            owner = Person.objects.get(email=request.session['useremail'])
+            try:
+                target = Person.objects.get(email=tEMail)
+                #An owner cannot have multiple ACTIVE blackmails out on the same
+                #target. If attempted, notify user they are already blackmailing that
+                #target, then redirect to Edit page.
+                blackmails = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
+                if blackmails:
+                    return redirect('/secrets/edit/')
+            except:
+                createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
+                target = Person.objects.get(email=tEMail)
 
-            #must get target and owner before calling createBlackmail. 
-                #Owner should be known if the user creating the blackmail is
-                #logged in. If the user is not logged in, they would have been
-                #redirected to the signin page.
-
-                #CHECK: Should the target info be a valid user or just an
-                #email?
-            createBlackmail(request, target, owner, 
+            createBlackmail(request, target.id, owner.id, 
                             form.cleaned_data['picture'],
                             form.cleaned_data['deadline'],
                             form.cleaned_data['demands'])
-            #if the blackmail was created, should redirect to details page with
-            #blackmail
-                # TODO ^ : Search database for bm_id; if found, redirect
-                    #CHECK: Can an owner have multiple ACTIVE blackmails out on
-                    #the same target?
-                    # If so,
-                        #need to create a method to get the ID of the currently
-                        #selected record. (In this case, the current record would
-                        #be the newly created record; perhaps the createBlackmail
-                        #function should return the new record's ID).
-                    # If not,
-                        #need to make sure the user knows they are already
-                        #blackmailing that target. Redirect to Edit page?
-            return redirect('/secrets/create.html/(?P<bm_id>\d+)/')
+            #Get the newly created blackmail object's ID, then redirect to the
+            #details page.
+            blackmail = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
+            return redirect('/secrets/create.html/(?P<blackmail.id>\d+)/')
         else:
             c = {}
             c.update(csrf(request))
@@ -121,7 +122,8 @@ def create(request):
         return render_to_response('secrets/create.html', c)
 
     return HttpResponse("create bm page")
-    
+
+
 def signin(request):
     if request.method == 'POST':
         #get form data
@@ -152,7 +154,8 @@ def signin(request):
         c.update(csrf(request))
         c['form'] = form
         return render_to_response('secrets/signin.html', c)
-    
+
+
 def signup(request):
     if request.method == 'POST':
         #get form data
@@ -189,7 +192,6 @@ def signup(request):
         return render_to_response('secrets/createPersonForm.html', c)
 
 
-
 #Helper Functions ******************************************************
 
 
@@ -202,7 +204,8 @@ def signup(request):
 def isLoggedIn(request):
     loggedin = request.session.get('loggedin', False)
     return loggedin
-        
+
+
 #checkCreds - validate credentials and set session variables
 #   params:
 #       request - current request object
@@ -225,51 +228,69 @@ def checkCreds(request, useremail, pw):
         return True
     else:
         return False
-        
-#checkCreds - validate credentials and set session variables
+
+
+#createUserAccount - validate credentials and set session variables
 #   params:
 #       request - current request object
 #       userename - name of user
 #       useremail - email address of user
 #       pw1 - first instance of user's password
 #       pw2 - second instance of user's password
+#       target - determines whether this is an account being created for
+#                a target rather than a user.
 #   returns: string
 #       "ok" if user account created
 #       errorMsg otherwise
-def createUserAccount(request, username, useremail, pw1, pw2):
+def createUserAccount(request, username, useremail, pw1, pw2, target=False):
     #ensure user typed same pw twice
     if pw1 != pw2:
         return "Passwords must match"
     
-    p_list = Person.objects.all()
-    for p in p_list:
-        #ensure email is unique
-        if p.email == useremail:
-            return "Account already exists for that email"
+    #Assume we will be adding a new account to the database.
+    newPerson = True
     
     #salt and encrypt pw
     pwsalt = str(datetime.datetime.now())
     saltedpw = pwsalt + pw1
     encpw = hashlib.sha512(saltedpw).hexdigest()
-    
+
+    p_list = Person.objects.all()
+    for p in p_list:
+        #ensure email is unique
+        if p.email == useremail:
+            #Account found, make sure it wasn't created as a target account.
+            if p.username != 'TARGET':
+                return "Account already exists for that email"
+            else:
+                #Account created as target account. Modify account info to
+                #reflect user's info.
+                newPerson = False
+                addUser(p, usermail, username, encpw, pwsalt)
+                break
+
     #create and store new Person object
-    p = Person()
-    p.name = username
+    if newPerson:
+        p = Person()
+        addUser(p, usermail, username, encpw, pwsalt)
+    
+    #set session variables and send email to the new user
+    if not target:
+        request.session['loggedin'] = True
+        request.session['useremail'] = useremail
+        #sendUserCreatedEmail(useremail)
+
+    return "ok"
+
+
+def addUser(p, usermail, username, encpw, pwsalt):
     p.email = useremail
+    p.name = username
     p.password = encpw
     p.salt = pwsalt
     p.save()
-    
-    #send email to the new user
-    #sendUserCreatedEmail(useremail)
-    
-    #set session variables
-    request.session['loggedin'] = True
-    request.session['useremail'] = useremail
-    return "ok"
-        
-        
-        
+
+
 def sendUserCreatedEmail(useremail):
     body = '''
 Congradulations on joining OrangeBottles, The #1 new blackmailing website!
@@ -277,6 +298,16 @@ We look forward to seeing what others have in store for them...
     '''
     email = EmailMessage('Welcome to OrangeBottles', 'body', to=[useremail])
     email.send()
+
+
+def sendTargetEmail(useremail):
+    body = '''
+You are the target of a blackmail! Please visit localhost:8000\sessions\
+for more information.
+    '''
+    email = EmailMessage('Blackmail Target Alert!!!', 'body', to=[useremail])
+    email.send()
+
 
 def createBlackmail(request, target, owner, picture, deadline, demands):
     b = Blackmail()
