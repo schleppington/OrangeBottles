@@ -1,6 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from models import Blackmail
+from models import BlackmailFields
 
 class loginForm(forms.Form):
     Email = forms.EmailField()
@@ -14,5 +14,4 @@ class createUserForm(forms.Form):
 
 class createBlackmailForm(ModelForm):
     class Meta:
-        model = Blackmail
-        exclude = ('demandsmet', 'timecreated')
+        model = BlackmailFields
