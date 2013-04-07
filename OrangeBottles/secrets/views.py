@@ -79,13 +79,13 @@ def edit(request, bm_id):
         #CHECK: Should this be a return statement instead?
         redirect('/secrets/signin/')
 
-    b = Blackmail.object.get(id=bm_id)
-    p = Person.object.get(email=request.session['useremail'])
+    b = Blackmail.objects.get(pk=bm_id)
+    p = Person.objects.get(email=request.session['useremail'])
 
     #Make sure user has the proper credentials to edit, before letting
     #them see the options/data.
-    if (b.id != p.id):
-        return redirect('/secrets/details.html/(?P<bm_id>\d+)/')
+    if (b.owner.pk != p.pk):
+        return redirect('/secrets/details/%s/' %b.pk)
     if request.method == 'POST':
         #must create edit form
         form = secretsforms.createEditForm(request.POST)
@@ -97,7 +97,7 @@ def edit(request, bm_id):
         c = {}
         c.update(csrf(request))
         c['form'] = form
-        return render_to_response('secrets/edit.html/(?P<bm_id>\d+)/', c)
+        return render_to_response('secrets/edit/%s/' %bm_id, c)
 
     return HttpResponse("editing page")
     
@@ -113,27 +113,32 @@ def create(request):
         if form.is_valid():
             tEMail = form.cleaned_data['target']
             #must get target and owner ID's before calling createBlackmail.
-            owner = Person.objects.get(email=request.session['useremail'])
-            try:
-                target = Person.objects.get(email=tEMail)
-                #An owner cannot have multiple ACTIVE blackmails out on the same
-                #target. If attempted, notify user they are already blackmailing that
-                #target, then redirect to Edit page.
-                blackmails = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
-                if blackmails:
-                    return redirect('/secrets/edit.html/(?P<blackmail.id>\d+)/')
-            except:
-                createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
-                target = Person.objects.get(email=tEMail)
+            o = Person.objects.get(email=request.session['useremail'])
 
-            createBlackmail(request, target, owner, 
-                            request.FILES['picture'],
-                            form.cleaned_data['deadline'],
-                            form.cleaned_data['demands'])
-            #Get the newly created blackmail object's ID, then redirect to the
-            #details page.
-            blackmail = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
-            return redirect('/secrets/details.html/(?P<blackmail.id>\d+)/')
+            #See if the current target is found in the database.
+            try:
+                t = Person.objects.get(email=tEMail)
+            except Person.DoesNotExist:
+                createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
+                t = Person.objects.get(email=tEMail)
+
+            #An owner cannot have multiple ACTIVE blackmails out on the same
+            #target. If attempted, notify user they are already blackmailing that
+            #target, then redirect to Edit page.
+            try:
+                blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
+                if blackmail:
+                     return redirect('/secrets/edit/%s/' %blackmail.pk)
+            except Blackmail.DoesNotExist:
+                createBlackmail(request, t, o, 
+                                                 request.FILES['picture'],
+                                                 form.cleaned_data['deadline'],
+                                                 form.cleaned_data['demands'])
+                #Get the newly created blackmail object's ID, then redirect to the
+                #details page.
+                blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
+
+            return redirect('/secrets/details/%s/' %blackmail.pk)
 
         else:
             c = {}
@@ -288,7 +293,7 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
         #ensure email is unique
         if p.email == useremail:
             #Account found, make sure it wasn't created as a target account.
-            if p.username != 'TARGET':
+            if p.name != 'TARGET':
                 return "Account already exists for that email"
             else:
                 newPerson = False
@@ -343,10 +348,9 @@ def createBlackmail(request, target, owner, picture, deadline, demands):
     b.deadline = deadline
     b.timecreated = str(datetime.datetime.now())
     b.demandsmet = False
+    b.save()
     
     t = Term()
-    t.blackmail = b.id
+    t.blackmail = b
     t.demand = demands
-
-    b.save()
     t.save()
