@@ -63,28 +63,49 @@ def index(request):
     
 
 def details(request, bm_id):
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        #CHECK: Should this be a return statement instead?
+        redirect('secrets/signin/')
+    
     #no post method, everything happens in the response.
     #This will probably just be a templating thing?
     return HttpResponse("details page")
     
 
 def edit(request, bm_id):
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        #CHECK: Should this be a return statement instead?
+        redirect('secrets/signin/')
+
+    b = Blackmail.object.get(id=bm_id)
+
     if request.method == 'POST':
         #must create edit form
+        form = secretsforms.createEditForm(request.POST)
         if form.is_valid():
             print "edit blackmail"
+    
+    else:
+        form = secretsforms.createEditForm()
+        c = {}
+        c.update(csrf(request))
+        c['form'] = form
+        return render_to_response('secrets/edit.html/(?P<bm_id>\d+)/', c)
+
     return HttpResponse("editing page")
     
 
 def create(request):
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        #CHECK: Should this be a return statement instead?
+        redirect('secrets/signin/')
+
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST)
         if form.is_valid():
-            #If the user is not logged in, need to have them do so.
-            if not isLoggedIn(request):
-                #CHECK: Should this be a return statement instead?
-                redirect('/secrets/signin/')
-            
             tEMail = form.cleaned_data['target']
             #must get target and owner ID's before calling createBlackmail.
             owner = Person.objects.get(email=request.session['useremail'])
@@ -95,7 +116,7 @@ def create(request):
                 #target, then redirect to Edit page.
                 blackmails = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
                 if blackmails:
-                    return redirect('/secrets/edit/')
+                    return redirect('secrets/edit/')
             except:
                 createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
                 target = Person.objects.get(email=tEMail)
@@ -107,13 +128,15 @@ def create(request):
             #Get the newly created blackmail object's ID, then redirect to the
             #details page.
             blackmail = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
-            return redirect('/secrets/create.html/(?P<blackmail.id>\d+)/')
+            return redirect('secrets/details.html/(?P<blackmail.id>\d+)/')
+
         else:
             c = {}
             c.update(csrf(request))
             c['formhaserrors'] = True
             c['form'] = form
             return render_to_response('secrets/create.html', c)
+
     else:
         form = secretsforms.createBlackmailForm()
         c = {}
@@ -263,8 +286,6 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
             if p.username != 'TARGET':
                 return "Account already exists for that email"
             else:
-                #Account created as target account. Modify account info to
-                #reflect user's info.
                 newPerson = False
                 addUser(p, usermail, username, encpw, pwsalt)
                 break
