@@ -15,3 +15,7 @@ class createUserForm(forms.Form):
 class createBlackmailForm(ModelForm):
     class Meta:
         model = BlackmailFields
+
+class createEditForm(ModelForm):
+    class Meta:
+        model = BlackmailFields
