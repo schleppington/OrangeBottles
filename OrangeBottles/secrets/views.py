@@ -4,7 +4,7 @@ from django.core.urlresolvers import reverse
 from django.template import RequestContext
 from django.core.context_processors import csrf
 from django.core.mail import EmailMessage
-from secrets.models import Person, Blackmail
+from secrets.models import Person, Blackmail, Term
 import datetime
 import secretsforms
 import hashlib
@@ -66,7 +66,7 @@ def details(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         #CHECK: Should this be a return statement instead?
-        redirect('secrets/signin/')
+        redirect('/secrets/signin/')
     
     #no post method, everything happens in the response.
     #This will probably just be a templating thing?
@@ -77,10 +77,15 @@ def edit(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         #CHECK: Should this be a return statement instead?
-        redirect('secrets/signin/')
+        redirect('/secrets/signin/')
 
     b = Blackmail.object.get(id=bm_id)
+    p = Person.object.get(email=request.session['useremail'])
 
+    #Make sure user has the proper credentials to edit, before letting
+    #them see the options/data.
+    if (b.id != p.id):
+        return redirect('/secrets/details.html/(?P<bm_id>\d+)/')
     if request.method == 'POST':
         #must create edit form
         form = secretsforms.createEditForm(request.POST)
@@ -101,10 +106,10 @@ def create(request):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         #CHECK: Should this be a return statement instead?
-        redirect('secrets/signin/')
+        redirect('/secrets/signin/')
 
     if request.method == 'POST':
-        form = secretsforms.createBlackmailForm(request.POST)
+        form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
             tEMail = form.cleaned_data['target']
             #must get target and owner ID's before calling createBlackmail.
@@ -116,19 +121,19 @@ def create(request):
                 #target, then redirect to Edit page.
                 blackmails = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
                 if blackmails:
-                    return redirect('secrets/edit/')
+                    return redirect('/secrets/edit.html/(?P<blackmail.id>\d+)/')
             except:
                 createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
                 target = Person.objects.get(email=tEMail)
 
-            createBlackmail(request, target.id, owner.id, 
-                            form.cleaned_data['picture'],
+            createBlackmail(request, target, owner, 
+                            request.FILES['picture'],
                             form.cleaned_data['deadline'],
                             form.cleaned_data['demands'])
             #Get the newly created blackmail object's ID, then redirect to the
             #details page.
             blackmail = Blackmail.objects.filter(target_id=target.id, owner_id=owner.id)
-            return redirect('secrets/details.html/(?P<blackmail.id>\d+)/')
+            return redirect('/secrets/details.html/(?P<blackmail.id>\d+)/')
 
         else:
             c = {}
@@ -287,13 +292,13 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
                 return "Account already exists for that email"
             else:
                 newPerson = False
-                addUser(p, usermail, username, encpw, pwsalt)
+                addUser(p, useremail, username, encpw, pwsalt)
                 break
 
     #create and store new Person object
     if newPerson:
         p = Person()
-        addUser(p, usermail, username, encpw, pwsalt)
+        addUser(p, useremail, username, encpw, pwsalt)
     
     #set session variables and send email to the new user
     if not target:
@@ -304,7 +309,7 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
     return "ok"
 
 
-def addUser(p, usermail, username, encpw, pwsalt):
+def addUser(p, useremail, username, encpw, pwsalt):
     p.email = useremail
     p.name = username
     p.password = encpw
@@ -340,7 +345,7 @@ def createBlackmail(request, target, owner, picture, deadline, demands):
     b.demandsmet = False
     
     t = Term()
-    t.blackmail = b
+    t.blackmail = b.id
     t.demand = demands
 
     b.save()
