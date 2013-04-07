@@ -68,9 +68,13 @@ def details(request, bm_id):
         #CHECK: Should this be a return statement instead?
         redirect('/secrets/signin/')
     
-    #no post method, everything happens in the response.
-    #This will probably just be a templating thing?
-    return HttpResponse("details page")
+    c = {}
+    bm = Blackmail.objects.get(pk=bm_id)
+    lstTerms = Term.objects.filter(blackmail=bm)
+    
+    c['bm'] = bm
+    c['terms'] = list(lstTerms)
+    return render_to_response('secrets/details.html', c)
     
 
 def edit(request, bm_id):
@@ -132,11 +136,29 @@ def create(request):
             except Blackmail.DoesNotExist:
                 createBlackmail(request, t, o, 
                                                  request.FILES['picture'],
-                                                 form.cleaned_data['deadline'],
-                                                 form.cleaned_data['demands'])
+                                                 form.cleaned_data['deadline'])
                 #Get the newly created blackmail object's ID, then redirect to the
                 #details page.
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
+                
+                #get demands to go with the blackmail
+                t = Term()
+                t.blackmail = blackmail
+                t.demand = form.cleaned_data['term1']
+                t.save()
+                
+                strterm2 = form.cleaned_data['term2']
+                if strterm2:
+                    t2 = Term()
+                    t.blackmail = blackmail
+                    t.demand = strterm2
+                    t.save()
+                strterm3 = form.cleaned_data['term3']
+                if strterm3:
+                    t3 = Term()
+                    t.blackmail = blackmail
+                    t.demand = strterm3
+                    t.save()                
 
             return redirect('/secrets/details/%s/' %blackmail.pk)
 
@@ -340,7 +362,7 @@ for more information.
     email.send()
 
 
-def createBlackmail(request, target, owner, picture, deadline, demands):
+def createBlackmail(request, target, owner, picture, deadline):
     b = Blackmail()
     b.target = target
     b.owner = owner
@@ -349,8 +371,5 @@ def createBlackmail(request, target, owner, picture, deadline, demands):
     b.timecreated = str(datetime.datetime.now())
     b.demandsmet = False
     b.save()
-    
-    t = Term()
-    t.blackmail = b
-    t.demand = demands
-    t.save()
+    return b
+
