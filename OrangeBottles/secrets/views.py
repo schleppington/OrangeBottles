@@ -65,8 +65,7 @@ def index(request):
 def details(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
     
     c = {}
     bm = Blackmail.objects.get(pk=bm_id)
@@ -80,8 +79,7 @@ def details(request, bm_id):
 def edit(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
 
     b = Blackmail.objects.get(pk=bm_id)
     p = Person.objects.get(email=request.session['useremail'])
@@ -109,16 +107,14 @@ def edit(request, bm_id):
 def create(request):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
 
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
-            tEMail = form.cleaned_data['target']
-            #must get target and owner ID's before calling createBlackmail.
+            #must get target and owner objects before calling createBlackmail.
             o = Person.objects.get(email=request.session['useremail'])
-
+            tEMail = form.cleaned_data['target']
             #See if the current target is found in the database.
             try:
                 t = Person.objects.get(email=tEMail)
@@ -372,4 +368,3 @@ def createBlackmail(request, target, owner, picture, deadline):
     b.demandsmet = False
     b.save()
     return b
-
