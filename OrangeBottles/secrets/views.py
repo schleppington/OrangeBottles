@@ -8,6 +8,7 @@ from secrets.models import Person, Blackmail, Term
 import datetime
 import secretsforms
 import hashlib
+import os
 
 
 def index(request):
@@ -69,11 +70,18 @@ def details(request, bm_id):
         redirect('/secrets/signin/')
     
     c = {}
-    bm = Blackmail.objects.get(pk=bm_id)
+    bm = get_object_or_404(Blackmail, pk=bm_id)
+    
+    
+    
+    
     lstTerms = Term.objects.filter(blackmail=bm)
+    
+    basepath, filename = os.path.split(str(bm.picture))
     
     c['bm'] = bm
     c['terms'] = list(lstTerms)
+    c['imgpath'] = filename
     return render_to_response('secrets/details.html', c)
     
 
