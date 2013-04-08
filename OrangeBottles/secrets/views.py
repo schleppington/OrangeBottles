@@ -8,6 +8,7 @@ from secrets.models import Person, Blackmail, Term
 import datetime
 import secretsforms
 import hashlib
+import os
 
 
 def index(request):
@@ -65,23 +66,28 @@ def index(request):
 def details(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
     
     c = {}
-    bm = Blackmail.objects.get(pk=bm_id)
+    bm = get_object_or_404(Blackmail, pk=bm_id)
+    
+    
+    
+    
     lstTerms = Term.objects.filter(blackmail=bm)
+    
+    basepath, filename = os.path.split(str(bm.picture))
     
     c['bm'] = bm
     c['terms'] = list(lstTerms)
+    c['imgpath'] = filename
     return render_to_response('secrets/details.html', c)
     
 
 def edit(request, bm_id):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
 
     b = Blackmail.objects.get(pk=bm_id)
     p = Person.objects.get(email=request.session['useremail'])
@@ -109,16 +115,14 @@ def edit(request, bm_id):
 def create(request):
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
-        #CHECK: Should this be a return statement instead?
-        redirect('/secrets/signin/')
+        return redirect('/secrets/signin/')
 
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
-            tEMail = form.cleaned_data['target']
-            #must get target and owner ID's before calling createBlackmail.
+            #must get target and owner objects before calling createBlackmail.
             o = Person.objects.get(email=request.session['useremail'])
-
+            tEMail = form.cleaned_data['target']
             #See if the current target is found in the database.
             try:
                 t = Person.objects.get(email=tEMail)
@@ -372,4 +376,3 @@ def createBlackmail(request, target, owner, picture, deadline):
     b.demandsmet = False
     b.save()
     return b
-
