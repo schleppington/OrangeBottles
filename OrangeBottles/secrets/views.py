@@ -64,24 +64,33 @@ def index(request):
     
 
 def details(request, bm_id):
+    
+    outputDict = {}
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
-    
-    c = {}
+    else:
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = curUser
+
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
-    
+    #ensure that the current user is allowed to view this bm
+    now = datetime.datetime.now()
+    if bm.target.email != curUser and bm.owner.email != curUser and bm.deadline.replace(tzinfo=None) > now:
+        #access denied
+        return HttpResponse('Access to this page is denied!',status=401)
     
     
     lstTerms = Term.objects.filter(blackmail=bm)
     
     basepath, filename = os.path.split(str(bm.picture))
     
-    c['bm'] = bm
-    c['terms'] = list(lstTerms)
-    c['imgpath'] = filename
-    return render_to_response('secrets/details.html', c)
+    outputDict['bm'] = bm
+    outputDict['terms'] = list(lstTerms)
+    outputDict['imgpath'] = filename
+    return render_to_response('secrets/details.html', outputDict)
     
 
 def edit(request, bm_id):
@@ -250,6 +259,13 @@ def signup(request):
         c['form'] = form
         return render_to_response('secrets/createPersonForm.html', c)
 
+def signout(request):
+    if isLoggedIn(request):
+        request.session.clear()
+        
+    return redirect("/secrets/signin")
+    
+    
 
 #Helper Functions ******************************************************
 
