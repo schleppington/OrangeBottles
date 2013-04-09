@@ -12,6 +12,9 @@ import os
 
 
 def index(request):
+    #outputDict contains everything passed to the template
+    outputDict = {}
+    
     #get all blackmail objects
     bm_list = Blackmail.objects.all().order_by('-deadline')
     now = datetime.datetime.now()
@@ -28,7 +31,9 @@ def index(request):
     output = ""
     #gets the current user thats logged in (if user is logged in)
     if isLoggedIn(request):
-        output += "Current User: " + str(request.session.get('useremail','')) + "</br></br>"
+        curUser = str(request.session.get('useremail',''))
+        outputDict['curUser'] = curUser
+        output += "Current User: " + curUser + "</br></br>"
     #display bm objects in displaylist
     output += "all items: </br>"
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in bm_list])
@@ -37,8 +42,9 @@ def index(request):
     output += '</br></br>dont display list</br>'
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in dont_display])
     
-    outputDict = {}
     
+    
+    #get the time remaining until next bm is revealed if one exists
     if dont_display.count > 0:
         output += '</br></br>next object to be revealed</br>'
         output += str(dont_display[0]) + " : " + str(dont_display[0].deadline)
@@ -64,11 +70,16 @@ def index(request):
     
 
 def details(request, bm_id):
+    #outputDict contains everything passed to the template
+    outputDict = {}   
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
+    else:
+        curUser = str(request.session.get('useremail',''))
+        outputDict['curUser'] = curUser
     
-    c = {}
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
     
@@ -78,17 +89,23 @@ def details(request, bm_id):
     
     basepath, filename = os.path.split(str(bm.picture))
     
-    c['bm'] = bm
-    c['terms'] = list(lstTerms)
-    c['imgpath'] = filename
-    return render_to_response('secrets/details.html', c)
+    outputDict['bm'] = bm
+    outputDict['terms'] = list(lstTerms)
+    outputDict['imgpath'] = filename
+    return render_to_response('secrets/details.html', outputDict)
     
 
 def edit(request, bm_id):
+    #outputDict contains everything passed to the template
+    outputDict = {}   
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
-
+    else:
+        curUser = str(request.session.get('useremail',''))
+        outputDict['curUser'] = curUser
+        
     b = Blackmail.objects.get(pk=bm_id)
     p = Person.objects.get(email=request.session['useremail'])
 
@@ -104,18 +121,23 @@ def edit(request, bm_id):
     
     else:
         form = secretsforms.createEditForm()
-        c = {}
-        c.update(csrf(request))
-        c['form'] = form
-        return render_to_response('secrets/edit/%s/' %bm_id, c)
+        outputDict.update(csrf(request))
+        outputDict['form'] = form
+        return render_to_response('secrets/edit/%s/' %bm_id, outputDict)
 
     return HttpResponse("editing page")
     
 
 def create(request):
+    #outputDict contains everything passed to the template
+    outputDict = {}   
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
+    else:
+        curUser = str(request.session.get('useremail',''))
+        outputDict['curUser'] = curUser
 
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
@@ -146,41 +168,41 @@ def create(request):
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
                 
                 #get demands to go with the blackmail
-                t = Term()
-                t.blackmail = blackmail
-                t.demand = form.cleaned_data['term1']
-                t.save()
+                t1 = Term()
+                t1.blackmail = blackmail
+                t1.demand = form.cleaned_data['term1']
+                t1.save()
                 
                 strterm2 = form.cleaned_data['term2']
                 if strterm2:
                     t2 = Term()
-                    t.blackmail = blackmail
-                    t.demand = strterm2
-                    t.save()
+                    t2.blackmail = blackmail
+                    t2.demand = strterm2
+                    t2.save()
                 strterm3 = form.cleaned_data['term3']
                 if strterm3:
                     t3 = Term()
-                    t.blackmail = blackmail
-                    t.demand = strterm3
-                    t.save()                
-
+                    t3.blackmail = blackmail
+                    t3.demand = strterm3
+                    t3.save()          
+            #send target an email to inform him 
+            sendTargetEmail(t.email, blackmail.pk)
+            
             return redirect('/secrets/details/%s/' %blackmail.pk)
 
         else:
-            c = {}
-            c.update(csrf(request))
-            c['formhaserrors'] = True
-            c['form'] = form
-            return render_to_response('secrets/create.html', c)
+            outputDict.update(csrf(request))
+            outputDict['formhaserrors'] = True
+            outputDict['form'] = form
+            return render_to_response('secrets/create.html', outputDict)
 
     else:
         form = secretsforms.createBlackmailForm()
-        c = {}
-        c.update(csrf(request))
-        c['form'] = form
-        return render_to_response('secrets/create.html', c)
+        outputDict.update(csrf(request))
+        outputDict['form'] = form
+        return render_to_response('secrets/create.html', outputDict)
 
-    return HttpResponse("create bm page")
+#end create()
 
 
 def signin(request):
@@ -216,6 +238,7 @@ def signin(request):
 
 
 def signup(request):
+    
     if request.method == 'POST':
         #get form data
         form = secretsforms.createUserForm(request.POST)
@@ -250,6 +273,12 @@ def signup(request):
         c['form'] = form
         return render_to_response('secrets/createPersonForm.html', c)
 
+def signout(request):
+    if isLoggedIn(request):
+        request.session.clear()
+        
+    return redirect('/secrets/signin')
+    
 
 #Helper Functions ******************************************************
 
@@ -357,12 +386,12 @@ We look forward to seeing what others have in store for them...
     email.send()
 
 
-def sendTargetEmail(useremail):
+def sendTargetEmail(useremail, bm_pk):
     body = '''
-You are the target of a blackmail! Please visit localhost:8000\sessions\
+You are the target of a blackmail! Please visit localhost:8000/secrets/details/%s/
 for more information.
-    '''
-    email = EmailMessage('Blackmail Target Alert!!!', 'body', to=[useremail])
+    ''' % str(bm_pk)
+    email = EmailMessage('Blackmail Target Alert!!!', body, to=[useremail])
     email.send()
 
 
