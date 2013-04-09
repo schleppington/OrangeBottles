@@ -28,28 +28,14 @@ def index(request):
             #objects that are still hidden, used to get the next exipration time
             dont_display.insert(0,bm)
             
-    output = ""
     #gets the current user thats logged in (if user is logged in)
     if isLoggedIn(request):
-        curUser = str(request.session.get('useremail',''))
-        outputDict['curuser'] = curUser
-        output += "Current User: " + curUser + "</br></br>"
-        
-    #display bm objects in displaylist
-    output += "all items: </br>"
-    output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in bm_list])
-    output += "</br></br>display list: </br>"
-    output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in display_list])
-    output += '</br></br>dont display list</br>'
-    output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in dont_display])
-    
+        curUser = str(request.session.get('username',''))
+        outputDict['curuser'] = curUser    
     
     if dont_display.count > 0:
-        output += '</br></br>next object to be revealed</br>'
-        output += str(dont_display[0]) + " : " + str(dont_display[0].deadline)
         nextbm = dont_display[0]
         timetoreveal = nextbm.deadline.replace(tzinfo=None) - now
-        output += "</br>in: " + str(timetoreveal)
         days = timetoreveal.days
         secs = timetoreveal.seconds
         hours = int((secs / (3600)))
@@ -62,10 +48,9 @@ def index(request):
         outputDict['countdown_hours'] = hours
         outputDict['countdown_mins'] = mins
         outputDict['countdown_secs'] = secs
-        output += "</br>" + str(days) + " : " + str(hours) + " : " + str(mins) + " : " + str(secs)
             
-    outputDict['display_list'] = display_list
-    return HttpResponse(output)
+    outputDict['display_list'] = display_list      
+    return render_to_response('secrets/index.html', outputDict)
     
 
 def details(request, bm_id):
@@ -76,7 +61,7 @@ def details(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('useremail','')
+        curUser = request.session.get('username','')
         outputDict['curuser'] = curUser
 
     bm = get_object_or_404(Blackmail, pk=bm_id)
@@ -106,7 +91,7 @@ def edit(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('useremail','')
+        curUser = request.session.get('username','')
         outputDict['curuser'] = curUser
         
     b = Blackmail.objects.get(pk=bm_id)
@@ -139,7 +124,7 @@ def create(request):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('useremail','')
+        curUser = request.session.get('username','')
         outputDict['curuser'] = curUser
         
     if request.method == 'POST':
@@ -315,6 +300,7 @@ def checkCreds(request, useremail, pw):
     if p.password == encpw:
         request.session['loggedin'] = True
         request.session['useremail'] = useremail
+        request.session['username'] = p.name
         return True
     else:
         return False

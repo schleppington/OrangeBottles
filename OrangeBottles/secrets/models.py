@@ -1,4 +1,5 @@
 from django.db import models
+import os
 
 class Person(models.Model):
     name = models.CharField(max_length=30)
@@ -16,6 +17,10 @@ class Blackmail(models.Model):
     deadline = models.DateTimeField()
     timecreated = models.DateTimeField('date published')  
     demandsmet = models.BooleanField(default=False)
+    def imgfile(self):
+        base, filename = os.path.split(str(self.picture))
+        return filename
+        
     def __unicode__(self):
         return "Target: " + str(self.target) + " - owner: " + str(self.owner)
     
