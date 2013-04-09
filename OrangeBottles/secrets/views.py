@@ -36,6 +36,7 @@ def index(request):
     if dont_display.count > 0:
         nextbm = dont_display[0]
         timetoreveal = nextbm.deadline.replace(tzinfo=None) - now
+        outputDict['totalseconds'] = int(timetoreveal.total_seconds())
         days = timetoreveal.days
         secs = timetoreveal.seconds
         hours = int((secs / (3600)))
