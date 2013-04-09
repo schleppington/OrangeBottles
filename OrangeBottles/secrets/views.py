@@ -12,6 +12,9 @@ import os
 
 
 def index(request):
+    
+    outputDict = {}
+    
     #get all blackmail objects
     bm_list = Blackmail.objects.all().order_by('-deadline')
     now = datetime.datetime.now()
@@ -28,7 +31,10 @@ def index(request):
     output = ""
     #gets the current user thats logged in (if user is logged in)
     if isLoggedIn(request):
-        output += "Current User: " + str(request.session.get('useremail','')) + "</br></br>"
+        curUser = str(request.session.get('useremail',''))
+        outputDict['curuser'] = curUser
+        output += "Current User: " + curUser + "</br></br>"
+        
     #display bm objects in displaylist
     output += "all items: </br>"
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in bm_list])
@@ -37,7 +43,6 @@ def index(request):
     output += '</br></br>dont display list</br>'
     output += '</br>'.join([str(bm) + " : " + str(bm.deadline) for bm in dont_display])
     
-    outputDict = {}
     
     if dont_display.count > 0:
         output += '</br></br>next object to be revealed</br>'
@@ -64,7 +69,7 @@ def index(request):
     
 
 def details(request, bm_id):
-    
+    #outputDict contains everything that will be passed to the template
     outputDict = {}
     
     #If the user is not logged in, need to have them do so.
@@ -94,10 +99,16 @@ def details(request, bm_id):
     
 
 def edit(request, bm_id):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
-
+    else:
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = curUser
+        
     b = Blackmail.objects.get(pk=bm_id)
     p = Person.objects.get(email=request.session['useremail'])
 
@@ -113,19 +124,24 @@ def edit(request, bm_id):
     
     else:
         form = secretsforms.createEditForm()
-        c = {}
-        c.update(csrf(request))
-        c['form'] = form
-        return render_to_response('secrets/edit/%s/' %bm_id, c)
+        outputDict.update(csrf(request))
+        outputDict['form'] = form
+        return render_to_response('secrets/edit/%s/' %bm_id, outputDict)
 
     return HttpResponse("editing page")
     
 
 def create(request):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
+    
     #If the user is not logged in, need to have them do so.
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
-
+    else:
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = curUser
+        
     if request.method == 'POST':
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
@@ -176,18 +192,16 @@ def create(request):
             return redirect('/secrets/details/%s/' %blackmail.pk)
 
         else:
-            c = {}
-            c.update(csrf(request))
-            c['formhaserrors'] = True
-            c['form'] = form
-            return render_to_response('secrets/create.html', c)
+            outputDict.update(csrf(request))
+            outputDict['formhaserrors'] = True
+            outputDict['form'] = form
+            return render_to_response('secrets/create.html', outputDict)
 
     else:
         form = secretsforms.createBlackmailForm()
-        c = {}
-        c.update(csrf(request))
-        c['form'] = form
-        return render_to_response('secrets/create.html', c)
+        outputDictupdate(csrf(request))
+        outputDict['form'] = form
+        return render_to_response('secrets/create.html', outputDict)
 
     return HttpResponse("create bm page")
 
@@ -258,6 +272,7 @@ def signup(request):
         c.update(csrf(request))
         c['form'] = form
         return render_to_response('secrets/createPersonForm.html', c)
+
 
 def signout(request):
     if isLoggedIn(request):
