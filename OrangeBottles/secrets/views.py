@@ -61,8 +61,9 @@ def details(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
-        outputDict['curuser'] = curUser
+        print "something"
+        #curUser = request.session.get('username','')
+        #outputDict['curuser'] = curUser
 
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
