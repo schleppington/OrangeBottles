@@ -70,10 +70,7 @@ def details(request, bm_id):
     
     c = {}
     bm = get_object_or_404(Blackmail, pk=bm_id)
-    
-    
-    
-    
+
     lstTerms = Term.objects.filter(blackmail=bm)
     
     basepath, filename = os.path.split(str(bm.picture))
@@ -100,14 +97,21 @@ def edit(request, bm_id):
         #must create edit form
         form = secretsforms.createEditForm(request.POST)
         if form.is_valid():
+            #TODO: Save edited data
             print "edit blackmail"
     
     else:
         form = secretsforms.createEditForm()
         c = {}
+        bm = get_object_or_404(Blackmail, pk=bm_id)
+        lstTerms = Term.objects.filter(blackmail=bm)
+        basepath, filename = os.path.split(str(bm.picture))        
         c.update(csrf(request))
+        c['bm'] = bm
+        c['terms'] = list(lstTerms)
+        c['imgpath'] = filename
         c['form'] = form
-        return render_to_response('secrets/edit/%s/' %bm_id, c)
+        return render_to_response('secrets/edit.html/', c)
 
     return HttpResponse("editing page")
     
