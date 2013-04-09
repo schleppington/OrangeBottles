@@ -146,23 +146,23 @@ def create(request):
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
                 
                 #get demands to go with the blackmail
-                t = Term()
-                t.blackmail = blackmail
-                t.demand = form.cleaned_data['term1']
-                t.save()
+                t1 = Term()
+                t1.blackmail = blackmail
+                t1.demand = form.cleaned_data['term1']
+                t1.save()
                 
                 strterm2 = form.cleaned_data['term2']
                 if strterm2:
                     t2 = Term()
-                    t.blackmail = blackmail
-                    t.demand = strterm2
-                    t.save()
+                    t2.blackmail = blackmail
+                    t2.demand = strterm2
+                    t2.save()
                 strterm3 = form.cleaned_data['term3']
                 if strterm3:
                     t3 = Term()
-                    t.blackmail = blackmail
-                    t.demand = strterm3
-                    t.save()                
+                    t3.blackmail = blackmail
+                    t3.demand = strterm3
+                    t3.save()         
 
             return redirect('/secrets/details/%s/' %blackmail.pk)
 
