@@ -21,7 +21,6 @@ class createBlackmailForm(forms.Form):
     term3 = forms.CharField(max_length=400, required=False, label="Third demand (Optional)")
 
 class createEditForm(forms.Form):
-    target = forms.EmailField(max_length=50)
     picture = forms.ImageField()
     deadline = forms.DateTimeField()
     term1 = forms.CharField(max_length=400, required=True, label="First demand")
