@@ -7,6 +7,7 @@
 
 /*======= index.html =======*/
 #page1 header{height:200px;}
+.centercontents {text-align: center !important;}
 
 /* Global properties ======================================================== */
 body{background:#000;border:0;font:14px "Trebuchet MS", Arial, Helvetica, sans-serif;color:#696969;line-height:22px;font-style:italic}
