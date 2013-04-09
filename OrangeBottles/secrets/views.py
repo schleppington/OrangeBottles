@@ -36,6 +36,7 @@ def index(request):
     if dont_display.count > 0:
         nextbm = dont_display[0]
         timetoreveal = nextbm.deadline.replace(tzinfo=None) - now
+        outputDict['totalseconds'] = int(timetoreveal.total_seconds())
         days = timetoreveal.days
         secs = timetoreveal.seconds
         hours = int((secs / (3600)))
@@ -61,8 +62,8 @@ def details(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
-        outputDict['curuser'] = curUser
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = request.session.get('username','')
 
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
@@ -71,7 +72,9 @@ def details(request, bm_id):
     if bm.target.email != curUser and bm.owner.email != curUser and bm.deadline.replace(tzinfo=None) > now:
         #access denied
         return HttpResponse('Access to this page is denied!',status=401)
-    
+        
+    if bm.owner.email == curUser:
+        outputDict['allowedit'] = True
     
     lstTerms = Term.objects.filter(blackmail=bm)
     
