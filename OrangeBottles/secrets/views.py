@@ -199,7 +199,7 @@ def create(request):
 
     else:
         form = secretsforms.createBlackmailForm()
-        outputDictupdate(csrf(request))
+        outputDict.update(csrf(request))
         outputDict['form'] = form
         return render_to_response('secrets/create.html', outputDict)
 

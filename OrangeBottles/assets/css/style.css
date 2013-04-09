@@ -1,0 +1,41 @@
+
+/* Left & Right alignment */
+.left {float:left}
+.right {float:right}
+.wrapper {width:100%;overflow:hidden}
+
+
+/*======= index.html =======*/
+#page1 header{height:200px;}
+
+/* Global properties ======================================================== */
+body{background:#000;border:0;font:14px "Trebuchet MS", Arial, Helvetica, sans-serif;color:#696969;line-height:22px;font-style:italic}
+.css3{border-radius:8px;-moz-border-radius:8px;-webkit-border-radius:8px;box-shadow:0 0 4px rgba(0, 0, 0, .4);-moz-box-shadow:0 0 4px rgba(0, 0, 0, .4);-webkit-box-shadow:0 0 4px rgba(0, 0, 0, .4);position:relative}
+.body3{background:#fff}
+
+/* Global Structure ============================================================= */
+.main {margin:0 auto;width:940px}
+
+/* ============================= main layout ====================== */
+a{color:#696969;text-decoration:underline;outline:none}
+a:hover{text-decoration:none}
+h1{float: left; font-size:32px;font-style:normal;font-weight:400;line-height:1.2em;color:black;letter-spacing:-1px}
+h2{font-size:32px;font-style:normal;font-weight:400;line-height:1.2em;color:white;letter-spacing:-1px}
+h2.under{border-bottom:1px solid #e5e5e5;margin-bottom:25px}
+h3{float: left; font-size:26px;color:#178fc2 ;line-height:1.2em;letter-spacing:-0px;padding-bottom:16px;font-weight:400;font-style:normal}
+h3 span{display:block;margin-top:-7px}
+p{padding-bottom:22px}
+
+/* ============================= header ====================== */
+header{padding-top:34px;height:128px}
+#menu {float:right;padding-top:15px}
+#menu li {float:left;padding-left:51px}
+#menu li a{display:block;font:20px "Trebuchet MS", Arial, Helvetica, sans-serif;line-height:1.2em;color:#bbb;text-transform:uppercase;text-decoration:none;text-align:center;letter-spacing:-1px;height:79px;font-style:normal;font-weight:700}
+#menu li a span{font-size:13px;line-height:1.2em;color:#666666;display:block;letter-spacing:-1px;margin-top:-3px;font-weight:normal}
+#menu li a:hover, #menu .active a{color:#178fc2}
+#menu li a:hover span, #menu .active a span{color:#fff}
+
+/* ============================= footer ====================== */
+footer {padding:34px 0 38px 0;font-style:normal;color:#696969;text-align:center}
+footer a{color:#fff}
+footer a:hover{}
