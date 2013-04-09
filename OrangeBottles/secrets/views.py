@@ -82,7 +82,10 @@ def details(request, bm_id):
     
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
-    
+    #make sure the current user is allowed to view this bm
+    if bm.target.email != curUser and bm.owner.email != curUser:
+        #access denied
+        return HttpResponse("access denied!", status=401)
     
     
     lstTerms = Term.objects.filter(blackmail=bm)
