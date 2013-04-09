@@ -83,7 +83,8 @@ def details(request, bm_id):
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
     #make sure the current user is allowed to view this bm
-    if bm.target.email != curUser and bm.owner.email != curUser:
+    now = datetime.datetime.now()
+    if bm.target.email != curUser and bm.owner.email != curUser and bm.deadline.replace(tzinfo=None) > now:
         #access denied
         return HttpResponse("access denied!", status=401)
     
