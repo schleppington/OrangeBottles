@@ -11,6 +11,7 @@ import hashlib
 import os
 import random
 
+# Views ****************************************************************
 
 def index(request):
     
@@ -329,7 +330,62 @@ def signout(request):
         
     return redirect("/secrets/signin")
     
+def editaccount(request):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
     
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        return redirect('/secrets/signin/')
+    else:
+        curUser = request.session.get('username','')
+        outputDict['curuser'] = curUser
+        curEmail = request.session.get('useremail','')
+        outputDict['useremail'] = curEmail
+        
+    if request.method == 'POST':
+        #get form data
+        form = secretsforms.editUserForm(request.POST)
+        if form.is_valid():
+            #form is valid
+            username = form.cleaned_data['Name']
+            useremail = form.cleaned_data['Email']
+            oldpw = form.cleaned_data['oldPassword']
+            pw1 = form.cleaned_data['Password']
+            pw2 = form.cleaned_data['RePassword']
+            
+            p = Person.objects.get(email=curEmail)
+            p.name = username
+            p.email = useremail
+            
+            if checkCreds(request, curEmail, oldpw):
+                pwsalt = str(datetime.datetime.now())
+                saltedpw = pwsalt + pw1
+                encpw = hashlib.sha512(saltedpw).hexdigest()
+                p.password = encpw
+                p.salt = pwsalt
+                p.save()
+                outputDict['strError'] = "account updated"
+            else:                
+                outputDict['strError'] = "invalid old password"  
+                
+            #display form with msg
+            formdata = {'Name': curUser, 'Email':curEmail }
+            form = secretsforms.editUserForm(initial=formdata)
+            outputDict.update(csrf(request))
+            outputDict['formhaserrors'] = True      
+            outputDict['form'] = form
+            return render_to_response('secrets/editaccount.html', outputDict)
+            
+    else:
+        #display form
+        formdata = {'Name': curUser, 'Email':outputDict['useremail'] }
+        form = secretsforms.editUserForm(initial=formdata)
+        outputDict = {}
+        outputDict.update(csrf(request))
+        
+        outputDict['form'] = form
+        return render_to_response('secrets/editaccount.html', outputDict)
 
 #Helper Functions ******************************************************
 
