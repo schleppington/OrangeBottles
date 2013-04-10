@@ -165,7 +165,7 @@ def edit(request, bm_id):
                 elif t3:
                     createNewTerm(b, t3)
             
-            return redirect('/secrets/details/%s/' %b.pk)
+        return redirect('/secrets/details/%s/' %b.pk)
     
     else:
         form = secretsforms.createEditForm()
