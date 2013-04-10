@@ -381,7 +381,6 @@ def editaccount(request):
         #display form
         formdata = {'Name': curUser, 'Email':outputDict['useremail'] }
         form = secretsforms.editUserForm(initial=formdata)
-        outputDict = {}
         outputDict.update(csrf(request))
         
         outputDict['form'] = form
