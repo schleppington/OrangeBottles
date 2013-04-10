@@ -359,18 +359,24 @@ def editaccount(request):
             p.email = useremail
             
             if checkCreds(request, curEmail, oldpw):
-                pwsalt = str(datetime.datetime.now())
-                saltedpw = pwsalt + pw1
-                encpw = hashlib.sha512(saltedpw).hexdigest()
-                p.password = encpw
-                p.salt = pwsalt
+                if pw1 and pw2:
+                    if pw1 == pw2:
+                        pwsalt = str(datetime.datetime.now())
+                        saltedpw = pwsalt + pw1
+                        encpw = hashlib.sha512(saltedpw).hexdigest()
+                        p.password = encpw
+                        p.salt = pwsalt
+                else:
+                    outputDict['strError'] = "new passwords must match"
                 p.save()
+                request.session['useremail'] = p.email
+                request.session['username'] = p.name
                 outputDict['strError'] = "account updated"
             else:                
                 outputDict['strError'] = "invalid old password"  
                 
             #display form with msg
-            formdata = {'Name': curUser, 'Email':curEmail }
+            formdata = {'Name': request.session['username'], 'Email':request.session['useremail'] }
             form = secretsforms.editUserForm(initial=formdata)
             outputDict.update(csrf(request))
             outputDict['formhaserrors'] = True      
