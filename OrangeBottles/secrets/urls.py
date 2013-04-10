@@ -21,7 +21,10 @@ urlpatterns = patterns('secrets.views',
 #- create an account
     url(r'^signup/$', 'signup'),
     
-#- create an account
+#- sign out of an account
     url(r'^signout/$', 'signout'),
-    
+
+#- edit an account
+    url(r'^editaccount/$', 'editaccount'),
+        
 )
