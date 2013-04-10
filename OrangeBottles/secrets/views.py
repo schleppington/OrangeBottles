@@ -9,6 +9,7 @@ import datetime
 import secretsforms
 import hashlib
 import os
+import random
 
 
 def index(request):
@@ -62,7 +63,7 @@ def details(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
+        curUser = request.session.get('useremail','')
         outputDict['curuser'] = request.session.get('username','')
 
     bm = get_object_or_404(Blackmail, pk=bm_id)
@@ -189,10 +190,11 @@ def create(request):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
-        outputDict['curuser'] = curUser
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = request.session.get('username','')
         
     if request.method == 'POST':
+        randpw = ''
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
             #Get target and owner objects before calling createBlackmail.
@@ -201,8 +203,10 @@ def create(request):
             #See if the current target is found in the database.
             try:
                 t = Person.objects.get(email=tEMail)
+                randpw = 'your current password'
             except Person.DoesNotExist:
-                createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
+                randpw = str(random.randint(100000, 1000000))
+                createUserAccount(request, 'TARGET', tEMail, randpw, randpw, True)
                 t = Person.objects.get(email=tEMail)
 
             #An owner cannot have multiple ACTIVE blackmails out on the same
@@ -229,6 +233,9 @@ def create(request):
                 strterm3 = form.cleaned_data['term3']
                 if strterm3:
                     createNewTerm(blackmail, strterm3)
+
+            #send target an email
+            sendTargetEmail(tEMail, blackmail.pk, randpw)
 
             #Redirect to details page so user can see newly created blackmail data.
             return redirect('/secrets/details/%s/' %blackmail.pk)
@@ -431,12 +438,15 @@ We look forward to seeing what others have in store for them...
     email.send()
 
 
-def sendTargetEmail(useremail):
-    body = '''
-You are the target of a blackmail! Please visit localhost:8000\sessions\
-for more information.
-    '''
-    email = EmailMessage('Blackmail Target Alert!!!', 'body', to=[useremail])
+def sendTargetEmail(useremail, bm_pk, userpw):
+    body = ''
+    body += 'You are the target of a blackmail! Please visit http://localhost:8000/secrets/details/{0}/ '.format(bm_pk)
+    body += 'for more information.\n'
+    body += 'You may log in using the following info:\n'
+    body += 'user name: {0}\n'.format(useremail)
+    body += 'password: {0}\n'.format(userpw)
+     
+    email = EmailMessage('Blackmail Target Alert!!!', body, to=[useremail])
     email.send()
 
 def createNewTerm(bm, demand):
