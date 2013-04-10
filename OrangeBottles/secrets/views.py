@@ -9,7 +9,9 @@ import datetime
 import secretsforms
 import hashlib
 import os
+import random
 
+# Views ****************************************************************
 
 def index(request):
     
@@ -36,6 +38,7 @@ def index(request):
     if dont_display.count > 0:
         nextbm = dont_display[0]
         timetoreveal = nextbm.deadline.replace(tzinfo=None) - now
+        outputDict['totalseconds'] = int(timetoreveal.total_seconds())
         days = timetoreveal.days
         secs = timetoreveal.seconds
         hours = int((secs / (3600)))
@@ -61,8 +64,8 @@ def details(request, bm_id):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
-        outputDict['curuser'] = curUser
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = request.session.get('username','')
 
     bm = get_object_or_404(Blackmail, pk=bm_id)
     
@@ -71,8 +74,9 @@ def details(request, bm_id):
     if bm.target.email != curUser and bm.owner.email != curUser and bm.deadline.replace(tzinfo=None) > now:
         #access denied
         return HttpResponse('Access to this page is denied!',status=401)
-    
-    
+    if bm.owner.email == curUser:
+        outputDict['allowedit'] = True
+
     lstTerms = Term.objects.filter(blackmail=bm)
     
     basepath, filename = os.path.split(str(bm.picture))
@@ -102,16 +106,79 @@ def edit(request, bm_id):
     if (b.owner.pk != p.pk):
         return redirect('/secrets/details/%s/' %b.pk)
     if request.method == 'POST':
-        #must create edit form
-        form = secretsforms.createEditForm(request.POST)
+        form = secretsforms.createEditForm(request.POST, request.FILES)
         if form.is_valid():
-            print "edit blackmail"
+            #Make sure the deadline hasn't already passed before any
+            #any info is modified.
+            now = datetime.datetime.now()
+            if b.deadline.replace(tzinfo=None) > now:
+                deadline = form.cleaned_data['deadline']
+                
+                #Did the user change the deadline?
+                if b.deadline != deadline:
+                    b.deadline = deadline
+                
+                #Did the user change the image?
+                bpath, fname = os.path.split(str(b.picture))
+                img2 = request.FILES['picture']
+                if fname != img2:
+                    b.picture = request.FILES['picture']
+                
+                #Save changes
+                b.save()
+                
+                #Did the user change the terms?
+                terms = Term.objects.filter(blackmail=b)
+                t1 = form.cleaned_data['term1']
+                t2 = form.cleaned_data['term2']
+                t3 = form.cleaned_data['term3']
+                
+                i = 0
+                for t in terms:
+                    if i == 0:
+                        term1 = t
+                    elif i == 1:
+                        term2 = t
+                    elif i == 2:
+                        term3 = t
+                    i += 1
+            
+                if term1.demand != t1:
+                    if t1:
+                        term1.demand = t1
+                        term1.save()
+                if term2:
+                    if term2.demand != t2:
+                        if t2:
+                            term2.demand = t2
+                            term2.save()
+                        else:
+                            term2.delete()
+                elif t2:
+                    createNewTerm(b, t2)
+                if term3:
+                    if term3.demand != t3:
+                        if t3:
+                            term3.demand = t3
+                            term3.save()
+                        else:
+                            term3.delete()
+                elif t3:
+                    createNewTerm(b, t3)
+            
+        return redirect('/secrets/details/%s/' %b.pk)
     
     else:
         form = secretsforms.createEditForm()
+        bm = get_object_or_404(Blackmail, pk=bm_id)
+        lstTerms = Term.objects.filter(blackmail=bm)
+        basepath, filename = os.path.split(str(bm.picture))
         outputDict.update(csrf(request))
+        outputDict['bm'] = bm
+        outputDict['terms'] = list(lstTerms)
+        outputDict['imgpath'] = filename
         outputDict['form'] = form
-        return render_to_response('secrets/edit/%s/' %bm_id, outputDict)
+        return render_to_response('secrets/edit.html', outputDict)
 
     return HttpResponse("editing page")
     
@@ -124,20 +191,23 @@ def create(request):
     if not isLoggedIn(request):
         return redirect('/secrets/signin/')
     else:
-        curUser = request.session.get('username','')
-        outputDict['curuser'] = curUser
+        curUser = request.session.get('useremail','')
+        outputDict['curuser'] = request.session.get('username','')
         
     if request.method == 'POST':
+        randpw = ''
         form = secretsforms.createBlackmailForm(request.POST, request.FILES)
         if form.is_valid():
-            #must get target and owner objects before calling createBlackmail.
+            #Get target and owner objects before calling createBlackmail.
             o = Person.objects.get(email=request.session['useremail'])
             tEMail = form.cleaned_data['target']
             #See if the current target is found in the database.
             try:
                 t = Person.objects.get(email=tEMail)
+                randpw = 'your current password'
             except Person.DoesNotExist:
-                createUserAccount(request, 'TARGET', tEMail, 'CHANGEME', 'CHANGEME', True)
+                randpw = str(random.randint(100000, 1000000))
+                createUserAccount(request, 'TARGET', tEMail, randpw, randpw, True)
                 t = Person.objects.get(email=tEMail)
 
             #An owner cannot have multiple ACTIVE blackmails out on the same
@@ -151,29 +221,24 @@ def create(request):
                 createBlackmail(request, t, o, 
                                                  request.FILES['picture'],
                                                  form.cleaned_data['deadline'])
-                #Get the newly created blackmail object's ID, then redirect to the
-                #details page.
+                
+                #Get the newly created blackmail object
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
                 
                 #get demands to go with the blackmail
-                t1 = Term()
-                t1.blackmail = blackmail
-                t1.demand = form.cleaned_data['term1']
-                t1.save()
+                createNewTerm(blackmail, form.cleaned_data['term1'])
                 
                 strterm2 = form.cleaned_data['term2']
                 if strterm2:
-                    t2 = Term()
-                    t2.blackmail = blackmail
-                    t2.demand = strterm2
-                    t2.save()
+                    createNewTerm(blackmail, strterm2)
                 strterm3 = form.cleaned_data['term3']
                 if strterm3:
-                    t3 = Term()
-                    t3.blackmail = blackmail
-                    t3.demand = strterm3
-                    t3.save()         
+                    createNewTerm(blackmail, strterm3)
 
+            #send target an email
+            sendTargetEmail(tEMail, blackmail.pk, randpw)
+
+            #Redirect to details page so user can see newly created blackmail data.
             return redirect('/secrets/details/%s/' %blackmail.pk)
 
         else:
@@ -266,6 +331,67 @@ def signout(request):
     return redirect("/secrets/signin")
     
     
+def editaccount(request):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
+    
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        return redirect('/secrets/signin/')
+    else:
+        curUser = request.session.get('username','')
+        outputDict['curuser'] = curUser
+        curEmail = request.session.get('useremail','')
+        outputDict['useremail'] = curEmail
+        
+    if request.method == 'POST':
+        #get form data
+        form = secretsforms.editUserForm(request.POST)
+        if form.is_valid():
+            #form is valid
+            username = form.cleaned_data['Name']
+            useremail = form.cleaned_data['Email']
+            oldpw = form.cleaned_data['oldPassword']
+            pw1 = form.cleaned_data['Password']
+            pw2 = form.cleaned_data['RePassword']
+            
+            p = Person.objects.get(email=curEmail)
+            p.name = username
+            p.email = useremail
+            
+            if checkCreds(request, curEmail, oldpw):
+                if pw1 and pw2:
+                    if pw1 == pw2:
+                        pwsalt = str(datetime.datetime.now())
+                        saltedpw = pwsalt + pw1
+                        encpw = hashlib.sha512(saltedpw).hexdigest()
+                        p.password = encpw
+                        p.salt = pwsalt
+                else:
+                    outputDict['strError'] = "new passwords must match"
+                p.save()
+                request.session['useremail'] = p.email
+                request.session['username'] = p.name
+                outputDict['strError'] = "account updated"
+            else:                
+                outputDict['strError'] = "invalid old password"  
+                
+            #display form with msg
+            formdata = {'Name': request.session['username'], 'Email':request.session['useremail'] }
+            form = secretsforms.editUserForm(initial=formdata)
+            outputDict.update(csrf(request))
+            outputDict['formhaserrors'] = True      
+            outputDict['form'] = form
+            return render_to_response('secrets/editaccount.html', outputDict)
+            
+    else:
+        #display form
+        formdata = {'Name': curUser, 'Email':outputDict['useremail'] }
+        form = secretsforms.editUserForm(initial=formdata)
+        outputDict.update(csrf(request))
+        
+        outputDict['form'] = form
+        return render_to_response('secrets/editaccount.html', outputDict)
 
 #Helper Functions ******************************************************
 
@@ -374,14 +500,22 @@ We look forward to seeing what others have in store for them...
     email.send()
 
 
-def sendTargetEmail(useremail):
-    body = '''
-You are the target of a blackmail! Please visit localhost:8000\sessions\
-for more information.
-    '''
-    email = EmailMessage('Blackmail Target Alert!!!', 'body', to=[useremail])
+def sendTargetEmail(useremail, bm_pk, userpw):
+    body = ''
+    body += 'You are the target of a blackmail! Please visit http://localhost:8000/secrets/details/{0}/ '.format(bm_pk)
+    body += 'for more information.\n'
+    body += 'You may log in using the following info:\n'
+    body += 'user name: {0}\n'.format(useremail)
+    body += 'password: {0}\n'.format(userpw)
+     
+    email = EmailMessage('Blackmail Target Alert!!!', body, to=[useremail])
     email.send()
 
+def createNewTerm(bm, demand):
+    t = Term()
+    t.blackmail = bm
+    t.demand = demand
+    t.save()
 
 def createBlackmail(request, target, owner, picture, deadline):
     b = Blackmail()
