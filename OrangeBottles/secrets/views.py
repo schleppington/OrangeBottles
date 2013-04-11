@@ -127,43 +127,50 @@ def edit(request, bm_id):
                 #Save changes
                 b.save()
                 
-                #Did the user change the terms?
+                #Did the user change the terms? Retrieve the queryset.
                 terms = Term.objects.filter(blackmail=b)
-                t1 = form.cleaned_data['term1']
-                t2 = form.cleaned_data['term2']
-                t3 = form.cleaned_data['term3']
-                
-                i = 0
-                for t in terms:
-                    if i == 0:
+                term1 = None    #term1 - term3 are variables to store blackmail
+                term2 = None    #        terms already in the database.
+                term3 = None
+                t1 = form.cleaned_data['term1']     #t1 - t3 are variables to
+                t2 = form.cleaned_data['term2']     #     store new blackmail
+                t3 = form.cleaned_data['term3']     #     terms in.
+
+                i = 0           #i is used to keep track of how many terms were
+                                #  stored in the database.
+                for t in terms:     # this loop is used to retrieve all terms
+                    if i == 0:      # stored in the queryset "terms"
                         term1 = t
                     elif i == 1:
                         term2 = t
                     elif i == 2:
                         term3 = t
                     i += 1
-            
+                # the following if conditions are used to determine which terms,
+                # if any, were changed.
                 if term1.demand != t1:
                     if t1:
                         term1.demand = t1
                         term1.save()
-                if term2:
+                if term2:       # Was there previously a 2nd term?
                     if term2.demand != t2:
-                        if t2:
+                        if t2:  # Is there a 2nd term in the updated list?
                             term2.demand = t2
                             term2.save()
-                        else:
+                        else:   # No 2nd term in updated list, delete original one.
                             term2.delete()
-                elif t2:
+                elif t2:       # There wasn't a 2nd term previously, is there a
+                                # 2nd term now?
                     createNewTerm(b, t2)
-                if term3:
+                if term3:       # Was there previously a 3rd term?
                     if term3.demand != t3:
-                        if t3:
+                        if t3:  # Is there a 3rd term in the updated list?
                             term3.demand = t3
                             term3.save()
-                        else:
+                        else:   # No 3rd term in updated list, delete original one.
                             term3.delete()
-                elif t3:
+                elif t3:       # There wasn't a 3rd term previously, is there a
+                                # 3rd term now?
                     createNewTerm(b, t3)
             
         return redirect('/secrets/details/%s/' %b.pk)
