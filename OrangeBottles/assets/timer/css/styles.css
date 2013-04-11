@@ -5,7 +5,6 @@
 .clearfix {display: inline-block;}
 * html .clearfix { height: 1%;}
 .clearfix {display: block;}
-body{background:#2a2b2d;font:13px/1.3 'Microsoft Yahei','宋体';color:#999;}
 #page,#footer_inner{margin:0 auto;width:960px;}
 h1#logo{overflow:hidden;height:93px;padding: 25px 0;}
 h1#logo a{display:block;height:93px;}
@@ -23,21 +22,16 @@ a:hover{text-decoration:underline;}
 /*-核心代码-*/
 /* demo style */
 .special {
-	position:relative;
-	float:left;
-	width:840px;
-	height:247px;
-	background-image: url(../images/bg.png);
-    background-position: 0px 74px;
-    background-repeat: no-repeat;
+	width:100%;overflow:hidden;
 	margin-bottom:46px;
-	cursor:pointer;
-	
+	margin-left: auto;
+	margin-right: auto;
+	vertical-align: middle;
+	text-align: center;
 }
 #counter {
-	position:absolute;
-	top:135px;
-	left:279px;
+	margin-left: 325px;
+	vertical-align: middle;
 	z-index:4000;
 }
 
@@ -48,17 +42,4 @@ a:hover{text-decoration:underline;}
 
 .digit {
 	background-image:url(../images/digits.png)
-}
-
-#shading {
-	background-image: url(../images/sprites.png);
-	background-position: 0px -396px;
-	background-repeat: repeat-x;
-	float: left;
-	height: 44px;
-	position: absolute;
-	width: 291px;	
-	z-index:4100;
-	top:0;
-	left:0;
 }
