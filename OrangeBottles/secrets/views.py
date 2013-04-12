@@ -185,6 +185,7 @@ def edit(request, bm_id):
         outputDict.update(csrf(request))
         outputDict['bm'] = b        
         outputDict['form'] = form
+        outputDict['imgpath'] = filename
         return render_to_response('secrets/edit.html', outputDict)
 
     return HttpResponse("editing page")
@@ -336,6 +337,28 @@ def signout(request):
         request.session.clear()
         
     return redirect("/secrets/signin")
+  
+
+def myaccount(request):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
+    
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        return redirect('/secrets/signin/')
+    else:
+        curUser = request.session.get('username','')
+        outputDict['curuser'] = curUser
+        curEmail = request.session.get('useremail','')
+        outputDict['useremail'] = curEmail
+        
+    p = get_object_or_404(Person, email=curEmail)
+    
+    bms = Blackmail.objects.filter(owner=p)
+    
+    outputDict['p'] = p
+    outputDict['bm_list'] = bms
+    return render_to_response('secrets/myaccount.html', outputDict)
     
     
 def editaccount(request):
