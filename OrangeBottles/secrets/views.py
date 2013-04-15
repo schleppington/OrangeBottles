@@ -139,9 +139,14 @@ def edit(request, bm_id):
                     b.deadline = deadline
                 
                 #Did the user change the image?
-                img2 = request.FILES['picture']
-                if filename != img2:
-                    b.picture = request.FILES['picture']
+                try:
+                    img2 = request.FILES['picture']
+                except:
+                    img2 = None
+
+                if img2:
+                    if filename != img2:
+                        b.picture = request.FILES['picture']
                 
                 #Save changes
                 b.save()
