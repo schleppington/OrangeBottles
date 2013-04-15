@@ -14,6 +14,7 @@ class createUserForm(forms.Form):
 
 class createBlackmailForm(forms.Form):
     target = forms.EmailField(max_length=50)
+    tname = forms.CharField(max_length=30, required=False)
     picture = forms.ImageField()
     deadline = forms.DateTimeField()
     term1 = forms.CharField(max_length=400, required=True, label="First demand")
