@@ -220,12 +220,15 @@ def create(request):
                 randpw = 'your current password'
             except Person.DoesNotExist:
                 randpw = str(random.randint(100000, 1000000))
-                createUserAccount(request, 'TARGET', tEMail, randpw, randpw, True)
+                try:
+                    tname = form.cleaned_data['tname']
+                except:
+                    tname = 'TARGET'
+                createUserAccount(request, tname, tEMail, randpw, randpw, True)
                 t = Person.objects.get(email=tEMail)
 
             #An owner cannot have multiple ACTIVE blackmails out on the same
-            #target. If attempted, notify user they are already blackmailing that
-            #target, then redirect to Edit page.
+            #target. If attempted, redirect to Edit page.
             try:
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
                 if blackmail:
@@ -496,13 +499,7 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
     for p in p_list:
         #ensure email is unique
         if p.email == useremail:
-            #Account found, make sure it wasn't created as a target account.
-            if p.name != 'TARGET':
-                return "Account already exists for that email"
-            else:
-                newPerson = False
-                addUser(p, useremail, username, encpw, pwsalt)
-                break
+            return "Account already exists for that email"
 
     #create and store new Person object
     if newPerson:
