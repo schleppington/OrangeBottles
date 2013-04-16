@@ -98,8 +98,28 @@ def edit(request, bm_id):
         curUser = request.session.get('username','')
         outputDict['curuser'] = curUser
         
-    b = Blackmail.objects.get(pk=bm_id)
+    b = get_object_or_404(Blackmail, pk=bm_id)
     p = Person.objects.get(email=request.session['useremail'])
+
+    #Get Filename & Path
+    basepath, filename = os.path.split(str(b.picture))
+
+    #Get terms stored in database:
+    terms = Term.objects.filter(blackmail=b)
+    term1 = None    #term1 - term3 are variables to store blackmail
+    term2 = None    #        terms already in the database.
+    term3 = None
+
+    i = 0           #i is used to keep track of how many terms were
+                    #  stored in the database.
+    for t in terms:     # this loop is used to retrieve all terms
+        if i == 0:      # stored in the queryset "terms"
+            term1 = t
+        elif i == 1:
+            term2 = t
+        elif i == 2:
+            term3 = t
+        i += 1
 
     #Make sure user has the proper credentials to edit, before letting
     #them see the options/data.
@@ -107,10 +127,18 @@ def edit(request, bm_id):
         return redirect('/secrets/details/%s/' %b.pk)
     if request.method == 'POST':
         form = secretsforms.createEditForm(request.POST, request.FILES)
+        now = datetime.datetime.now()
+
+        #Does the user want to delete this blackmail?
+        if 'delete' in request.POST:
+            #Make sure it's not an old blackmail.
+            if b.deadline.replace(tzinfo=None) > now:
+                b.delete()
+            return redirect('/secrets/')
+
         if form.is_valid():
             #Make sure the deadline hasn't already passed before any
             #any info is modified.
-            now = datetime.datetime.now()
             if b.deadline.replace(tzinfo=None) > now:
                 deadline = form.cleaned_data['deadline']
                 
@@ -119,33 +147,23 @@ def edit(request, bm_id):
                     b.deadline = deadline
                 
                 #Did the user change the image?
-                bpath, fname = os.path.split(str(b.picture))
-                img2 = request.FILES['picture']
-                if fname != img2:
-                    b.picture = request.FILES['picture']
+                try:
+                    img2 = request.FILES['picture']
+                except:
+                    img2 = None
+
+                if img2:
+                    if filename != img2:
+                        b.picture = request.FILES['picture']
                 
                 #Save changes
                 b.save()
                 
-                #Did the user change the terms? Retrieve the queryset.
-                terms = Term.objects.filter(blackmail=b)
-                term1 = None    #term1 - term3 are variables to store blackmail
-                term2 = None    #        terms already in the database.
-                term3 = None
+                #Get the terms from the form.
                 t1 = form.cleaned_data['term1']     #t1 - t3 are variables to
                 t2 = form.cleaned_data['term2']     #     store new blackmail
                 t3 = form.cleaned_data['term3']     #     terms in.
 
-                i = 0           #i is used to keep track of how many terms were
-                                #  stored in the database.
-                for t in terms:     # this loop is used to retrieve all terms
-                    if i == 0:      # stored in the queryset "terms"
-                        term1 = t
-                    elif i == 1:
-                        term2 = t
-                    elif i == 2:
-                        term3 = t
-                    i += 1
                 # the following if conditions are used to determine which terms,
                 # if any, were changed.
                 if term1.demand != t1:
@@ -159,7 +177,7 @@ def edit(request, bm_id):
                             term2.save()
                         else:   # No 2nd term in updated list, delete original one.
                             term2.delete()
-                elif t2:       # There wasn't a 2nd term previously, is there a
+                elif t2:        # There wasn't a 2nd term previously, is there a
                                 # 2nd term now?
                     createNewTerm(b, t2)
                 if term3:       # Was there previously a 3rd term?
@@ -169,22 +187,18 @@ def edit(request, bm_id):
                             term3.save()
                         else:   # No 3rd term in updated list, delete original one.
                             term3.delete()
-                elif t3:       # There wasn't a 3rd term previously, is there a
+                elif t3:        # There wasn't a 3rd term previously, is there a
                                 # 3rd term now?
                     createNewTerm(b, t3)
-            
+
         return redirect('/secrets/details/%s/' %b.pk)
     
     else:
-        form = secretsforms.createEditForm()
-        bm = get_object_or_404(Blackmail, pk=bm_id)
-        lstTerms = Term.objects.filter(blackmail=bm)
-        basepath, filename = os.path.split(str(bm.picture))
+        form = secretsforms.createEditForm(initial={'deadline':b.deadline, 'term1':term1.demand, 'term2':term2, 'term3':term3})
         outputDict.update(csrf(request))
-        outputDict['bm'] = bm
-        outputDict['terms'] = list(lstTerms)
-        outputDict['imgpath'] = filename
+        outputDict['bm'] = b        
         outputDict['form'] = form
+        outputDict['imgpath'] = filename
         return render_to_response('secrets/edit.html', outputDict)
 
     return HttpResponse("editing page")
@@ -214,12 +228,17 @@ def create(request):
                 randpw = 'your current password'
             except Person.DoesNotExist:
                 randpw = str(random.randint(100000, 1000000))
-                createUserAccount(request, 'TARGET', tEMail, randpw, randpw, True)
+                try:
+                    tname = form.cleaned_data['tname']
+                    if len(tname) is 0:
+                        tname = 'TARGET'
+                except:
+                    tname = 'TARGET'
+                createUserAccount(request, tname, tEMail, randpw, randpw, True)
                 t = Person.objects.get(email=tEMail)
 
             #An owner cannot have multiple ACTIVE blackmails out on the same
-            #target. If attempted, notify user they are already blackmailing that
-            #target, then redirect to Edit page.
+            #target. If attempted, redirect to Edit page.
             try:
                 blackmail = Blackmail.objects.get(target__id=t.pk, owner__id=o.pk)
                 if blackmail:
@@ -336,6 +355,28 @@ def signout(request):
         request.session.clear()
         
     return redirect("/secrets/signin")
+  
+
+def myaccount(request):
+    #outputDict contains everything that will be passed to the template
+    outputDict = {}
+    
+    #If the user is not logged in, need to have them do so.
+    if not isLoggedIn(request):
+        return redirect('/secrets/signin/')
+    else:
+        curUser = request.session.get('username','')
+        outputDict['curuser'] = curUser
+        curEmail = request.session.get('useremail','')
+        outputDict['useremail'] = curEmail
+        
+    p = get_object_or_404(Person, email=curEmail)
+    
+    bms = Blackmail.objects.filter(owner=p)
+    
+    outputDict['p'] = p
+    outputDict['bm_list'] = bms
+    return render_to_response('secrets/myaccount.html', outputDict)
     
     
 def editaccount(request):
@@ -468,13 +509,7 @@ def createUserAccount(request, username, useremail, pw1, pw2, target=False):
     for p in p_list:
         #ensure email is unique
         if p.email == useremail:
-            #Account found, make sure it wasn't created as a target account.
-            if p.name != 'TARGET':
-                return "Account already exists for that email"
-            else:
-                newPerson = False
-                addUser(p, useremail, username, encpw, pwsalt)
-                break
+            return "Account already exists for that email"
 
     #create and store new Person object
     if newPerson:

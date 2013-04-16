@@ -14,6 +14,7 @@ class createUserForm(forms.Form):
 
 class createBlackmailForm(forms.Form):
     target = forms.EmailField(max_length=50)
+    tname = forms.CharField(max_length=30, required=False)
     picture = forms.ImageField()
     deadline = forms.DateTimeField()
     term1 = forms.CharField(max_length=400, required=True, label="First demand")
@@ -21,7 +22,7 @@ class createBlackmailForm(forms.Form):
     term3 = forms.CharField(max_length=400, required=False, label="Third demand (Optional)")
 
 class createEditForm(forms.Form):
-    picture = forms.ImageField()
+    picture = forms.ImageField(required=False)
     deadline = forms.DateTimeField()
     term1 = forms.CharField(max_length=400, required=True, label="First demand")
     term2 = forms.CharField(max_length=400, required=False, label="Second demand (Optional)")
