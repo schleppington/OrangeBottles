@@ -12,7 +12,7 @@
 /* Global properties ======================================================== */
 body{background:#000;border:0;font:20px "Trebuchet MS", Arial, Helvetica, sans-serif;color:#696969;line-height:22px;font-weight:bold}
 .css3{border-radius:8px;-moz-border-radius:8px;-webkit-border-radius:8px;box-shadow:0 0 4px rgba(0, 0, 0, .4);-moz-box-shadow:0 0 4px rgba(0, 0, 0, .4);-webkit-box-shadow:0 0 4px rgba(0, 0, 0, .4);position:relative}
-.body3{background:#fff; padding-top: 30px;}
+.body3{background:#fff; padding-top: 50px;}
 
 /* Global Structure ============================================================= */
 .main {margin:0 auto;width:940px}
@@ -801,5 +801,19 @@ input[type="submit"].btn.btn-mini {
   -webkit-border-radius: 0 0 6px 6px;
      -moz-border-radius: 0 0 6px 6px;
           border-radius: 0 0 6px 6px;
+}
+
+table {
+    border-collapse:collapse;
+    color:#000;
+}
+table, th, td {
+    border:1px solid black;
+}
+th, td{
+    padding:5px;
+}
+.rihcard {
+    color:#000000
 }
 
