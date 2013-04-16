@@ -127,10 +127,18 @@ def edit(request, bm_id):
         return redirect('/secrets/details/%s/' %b.pk)
     if request.method == 'POST':
         form = secretsforms.createEditForm(request.POST, request.FILES)
+        now = datetime.datetime.now()
+
+        #Does the user want to delete this blackmail?
+        if 'delete' in request.POST:
+            #Make sure it's not an old blackmail.
+            if b.deadline.replace(tzinfo=None) > now:
+                b.delete()
+            return redirect('/secrets/')
+
         if form.is_valid():
             #Make sure the deadline hasn't already passed before any
             #any info is modified.
-            now = datetime.datetime.now()
             if b.deadline.replace(tzinfo=None) > now:
                 deadline = form.cleaned_data['deadline']
                 
