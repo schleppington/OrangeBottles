@@ -51,9 +51,9 @@ def index(request):
         outputDict['countdown_hours'] = hours
         outputDict['countdown_mins'] = mins
         outputDict['countdown_secs'] = secs
-        outputDict['dont_display'] = dont_display
+        outputDict['dont_display'] = dont_display[0:3] 
             
-    outputDict['display_list'] = display_list     
+    outputDict['display_list'] = display_list    
      
     return render_to_response('secrets/index.html', outputDict)
     
@@ -373,9 +373,11 @@ def myaccount(request):
     p = get_object_or_404(Person, email=curEmail)
     
     bms = Blackmail.objects.filter(owner=p)
+    badbms = Blackmail.objects.filter(target=p)
     
     outputDict['p'] = p
     outputDict['bm_list'] = bms
+    outputDict['target_list'] = badbms
     return render_to_response('secrets/myaccount.html', outputDict)
     
     
