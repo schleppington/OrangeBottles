@@ -373,9 +373,11 @@ def myaccount(request):
     p = get_object_or_404(Person, email=curEmail)
     
     bms = Blackmail.objects.filter(owner=p)
+    badbms = Blackmail.objects.filter(target=p)
     
     outputDict['p'] = p
     outputDict['bm_list'] = bms
+    outputDict['target_list'] = badbms
     return render_to_response('secrets/myaccount.html', outputDict)
     
     
