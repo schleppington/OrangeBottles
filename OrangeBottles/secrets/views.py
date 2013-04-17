@@ -51,9 +51,9 @@ def index(request):
         outputDict['countdown_hours'] = hours
         outputDict['countdown_mins'] = mins
         outputDict['countdown_secs'] = secs
-        outputDict['dont_display'] = dont_display
+        outputDict['dont_display'] = dont_display[0:3] 
             
-    outputDict['display_list'] = display_list     
+    outputDict['display_list'] = display_list    
      
     return render_to_response('secrets/index.html', outputDict)
     
