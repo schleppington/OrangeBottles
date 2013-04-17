@@ -51,8 +51,10 @@ def index(request):
         outputDict['countdown_hours'] = hours
         outputDict['countdown_mins'] = mins
         outputDict['countdown_secs'] = secs
+        outputDict['dont_display'] = dont_display
             
-    outputDict['display_list'] = display_list      
+    outputDict['display_list'] = display_list     
+     
     return render_to_response('secrets/index.html', outputDict)
     
 
@@ -131,9 +133,7 @@ def edit(request, bm_id):
 
         #Does the user want to delete this blackmail?
         if 'delete' in request.POST:
-            #Make sure it's not an old blackmail.
-            if b.deadline.replace(tzinfo=None) > now:
-                b.delete()
+            b.delete()
             return redirect('/secrets/')
 
         if form.is_valid():
